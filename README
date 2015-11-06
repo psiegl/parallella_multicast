@@ -6,6 +6,11 @@ config and timer registers without any overhead of method calling
 Last, an barrier was implemented, able to utilize the hardware barrier
 capability.
 
+Contains:
+- light-weight implementation of the hardware barrier
+- light-weight inline-methods for the config/status/counter registers
+- ... and as descriped, the support of the multicast
+
 Minor issue:
 - The example is optimized for the 16 core version, but can also be
   modified to run on the 64 core variant (see config_t.h, also
