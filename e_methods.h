@@ -52,9 +52,12 @@ ALWAYS_INLINE void _e_reg_write_status( register unsigned val )
 
 
 unsigned * get_remote_ptr( unsigned id, void * ptr ) {
+// --------------------------------------------
+// needs to be adjusted for the 64 core version
   unsigned col_id = id & 0x3;
   unsigned row_id = id >> 2;
   unsigned core_id = (row_id * 0x40 + col_id) + e_group_config.group_id;
+// --------------------------------------------
   unsigned * new_ptr = (unsigned *)((core_id << 20) | (unsigned)ptr);
   return new_ptr;
 }
