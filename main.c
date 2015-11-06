@@ -86,15 +86,19 @@ int main( int argc, char * argv[] )
   printf( "start initialization\n" );
   while( ! mbox->ready ); // check if epiphany is ready
 
-  printf( "start massive computation\n" );
+  printf( "start massive computation\n\n" );
   mbox->go = 1; // let cores run!
   while( mbox->go );
 
   epiphany_finalize( &e_info );
 
-  unsigned i;
-  for( i = 0; i < _NUM_CORES; i++ )
-    printf("core %2d lat.: %2d clks\n", i, mbox->clocks[i] );
+  unsigned i, sum = 0;
+  for( i = 0; i < _NUM_CORES; i++ ) {
+    printf("core %2d lat.: %2d cycles\n", i, mbox->clocks[i] );
+    sum += mbox->clocks[i];
+  }
+
+  printf("\nMulticast average overhead: %d cycles\n\n", sum / _NUM_CORES );
 
   return 0;
 }
