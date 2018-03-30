@@ -25,15 +25,11 @@
 #ifndef _E_CONFIG_T_H_
 #define _E_CONFIG_T_H_
 
-#define _ROW_CORES    4
-#define _COL_CORES    4
-#define _NUM_CORES    (_ROW_CORES * _COL_CORES)
-
 typedef struct _mbox_t mbox_t;
 struct _mbox_t {
   volatile unsigned ready;
   volatile unsigned go;
-  volatile unsigned clocks[ _NUM_CORES ];
+  volatile unsigned clocks[];
 };
 
 #define ALWAYS_INLINE inline __attribute__((always_inline))

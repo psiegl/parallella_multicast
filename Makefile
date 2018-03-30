@@ -30,7 +30,7 @@ DEPS := $(shell ls .dep_*)
 -include $(DEPS)
 
 ## ACC  #################
-C_PERF := -O3
+C_PERF := -Os
 C_SIZE := -ffunction-sections -fdata-sections
 e_%.o: e_%.c
 	e-gcc ${C_PERF} ${C_SIZE} -Wall -Wunused-variable -MMD -MF".dep_$@.d" -c -o $@ $<

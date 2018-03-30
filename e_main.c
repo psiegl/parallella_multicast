@@ -32,71 +32,43 @@ volatile unsigned test;
 int main( void ) {
   test = 0;
 
-  e_ctimer_set(E_CTIMER_0, E_CTIMER_MAX);
-
-  unsigned c_id = e_group_config.core_row * e_group_config.group_cols + e_group_config.core_col;
-
   hw_barrier_init();
+
+  e_coreid_t pid = get_pcoreid();
 
   mbox_t * mbox = (mbox_t *) e_emem_config.base;
   mbox->ready = 1;
-  if( ! c_id ) {
+  if( pid == gen_pcoreid( 0, 0, e_group_config.group_id ) ) {
     mbox->ready = 1;
     while( ! mbox->go );
     mbox->ready = 0;
   }
 
+  set_ectimer0(E_CTIMER_MAX);
   e_ctimer_start(E_CTIMER_0, E_CTIMER_CLK);
+  hw_barrier();
 
-/*
-  Multicast register
+  e_coreid_t root = gen_pcoreid( 0, 3, e_group_config.group_id );
+  if( pid == root )
+    test = 3;
 
-  MULTICAST: 0xF0704 // <- manual is wrong!
-  Bits      Name           Function
-  [11:0]    MULTICAST_ID   ID to match to destination address[31:20] in the case of an incoming multicast write transaction
-  [31:12]   RESERVED       N/A
+// -------------- test ----------------------
+  unsigned time_bgn = get_ectimer0();
 
-        E_REG_COREID            = 0xf0704,
-        E_REG_MULTICAST         = 0xf0708,
-*/
+  bcast( (void*)&test, sizeof(unsigned), root );
 
-  // set for all the capability to recognize a multicast with id 1 << 11
-  unsigned multicast_id = 1 << 11; // push it to the top, so that it does not interfear with regular ld/st to mesh
-  unsigned * multicast_reg = ((unsigned*) get_remote_ptr( c_id, (void*) 0xF0708 /* E_REG_MULTICAST */ ));
-  unsigned multicast_original = *multicast_reg;
-  *multicast_reg = multicast_id;
-  volatile unsigned * p_test = (volatile unsigned *)(multicast_id << 20 | (unsigned) &test);
+  unsigned time_end = get_ectimer0();
 
-  unsigned reg_cfg = 0;
-  if( ! c_id ) { /* does only work for 0,1,2,3 */
-    // read current config register and set c_id wants to send a MULTICAST
-    reg_cfg = _e_reg_read_config();
-    unsigned reg_cfg_mmr = ((~(0xF << 12)) & reg_cfg) | (0x3 << 12);
-    _e_reg_write_config( reg_cfg_mmr );
-  }
+  while( test != 3 );
+
+// -------------- test ----------------------
+
+  e_coreid_t lid = e_group_config.core_row * e_group_config.group_cols + e_group_config.core_col;
+  mbox->clocks[ lid ] = time_bgn - time_end; // parallella is ticking down
 
   hw_barrier();
 
-// -------------- test ----------------------
-  unsigned time_start = _e_get_ctimer0();
-  if( ! c_id ) {
-    *p_test = 1; // this will be broadcasted as multicast
-  }
-  else {
-    while( ! test ); // listening for multicast
-  }
-  unsigned time_end = _e_get_ctimer0();
-// -------------- test ----------------------
-
-  if( ! c_id )
-    _e_reg_write_config( reg_cfg );
-  *multicast_reg = multicast_original;
-
-  mbox->clocks[ c_id ] = time_start - time_end; // parallella is ticking down
-
-  hw_barrier();
-
-  if( ! c_id ) {
+  if( pid == gen_pcoreid( 0, 0, e_group_config.group_id ) ) {
     mbox->go    = 0;
     mbox->ready = 1;
   }

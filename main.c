@@ -33,38 +33,38 @@ typedef struct _e_info_t e_info_t;
 struct _e_info_t {
   e_epiphany_t Epiphany;
   e_mem_t DRAM;
-  mbox_t * mbox;
+  mbox_t *mbox;
 };
 
 #define MB( x ) ( (x)*1024*1024 )
 
 extern e_platform_t e_platform;
-void epiphany_init( e_info_t * e_info )
+void epiphany_init( e_info_t *e_info )
 {
   e_init(NULL);
   e_reset_system();
 
-  if (e_open(&e_info->Epiphany, 0, 0, e_platform.chip[0].rows, e_platform.chip[0].cols)) {
-    printf( "\nERROR: Can't establish connection to Epiphany device!\n\n");
+  if (e_open(&e_info->Epiphany, 0, 0, e_platform.chip->rows, e_platform.chip->cols)) {
+    perror("ERROR: Can't establish connection to Epiphany device.\n");
     exit(1);
   }
   if (e_alloc(&e_info->DRAM, 0x00000000, MB(32))) {
-    printf( "\nERROR: Can't allocate Epiphany DRAM!\n\n");
+    perror("ERROR: Can't allocate Epiphany DRAM.\n");
     exit(1);
   }
-  e_info->mbox = (mbox_t * )e_info->DRAM.base;
+  e_info->mbox = (mbox_t*)e_info->DRAM.base;
   memset( (void*)e_info->mbox, 0, MB(32) );
 
   e_reset_group(&e_info->Epiphany);
 
-  if (e_load_group("e_main.srec", &e_info->Epiphany, 0, 0, 4, 4, E_FALSE ) == E_ERR) {
-    printf( "\nERROR: loading Epiphany program.\n");
+  if (e_load_group("e_main.srec", &e_info->Epiphany, 0, 0, e_platform.chip->rows, e_platform.chip->cols, E_FALSE ) == E_ERR) {
+    perror("ERROR: loading Epiphany program.\n");
     exit(1);
   }
 
 }
 
-void epiphany_finalize( e_info_t * e_info )
+void epiphany_finalize( e_info_t *e_info )
 {
   // Close connection to device
   if (e_close(&e_info->Epiphany)) {
@@ -91,22 +91,23 @@ int main( int argc, char * argv[] )
 
   e_start_group( &e_info.Epiphany ); // start epiphany
 
-  printf( "start initialization\n" );
+  unsigned ecores = e_platform.chip->rows * e_platform.chip->cols;
+  printf( "start initialization cores: %d\n", ecores );
   while( ! mbox->ready ); // check if epiphany is ready
 
   printf( "start massive computation\n\n" );
   mbox->go = 1; // let cores run!
   while( mbox->go );
 
-  epiphany_finalize( &e_info );
-
   unsigned i, sum = 0;
-  for( i = 0; i < _NUM_CORES; i++ ) {
+  for( i = 0; i < ecores; i++ ) {
     printf("core %2d lat.: %2d cycles\n", i, mbox->clocks[i] );
     sum += mbox->clocks[i];
   }
 
-  printf("\nMulticast average overhead: %d cycles\n\n", sum / _NUM_CORES );
+  printf("\nMulticast average overhead: %d cycles\n\n", sum / ecores );
+
+  epiphany_finalize( &e_info );
 
   return 0;
 }

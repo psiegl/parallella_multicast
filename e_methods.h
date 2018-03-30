@@ -27,47 +27,65 @@
 
 #include <e-lib.h> // e_group_config, e_ctimer_set(), e_ctimer_start()
 
-ALWAYS_INLINE unsigned _e_get_ctimer0()
-{
-  register unsigned tmp asm("r0");
-  asm volatile ("movfs %0, ctimer0;" : "=r" (tmp) :: );
-  return tmp;
-}
+#define set_ectimer0(VAL) \
+  asm volatile ("movts ctimer0, %0" : :"r" (VAL) : /*"ctimer0"*/);
 
-ALWAYS_INLINE unsigned _e_reg_read_config( void )
-{
-  register unsigned tmp asm("r0");
-  asm volatile ("movfs %0, config;" : "=r" (tmp) :: );
-  return tmp;
-}
+#define set_ectimer1(VAL) \
+  asm volatile ("movts ctimer1, %0" : :"r" (VAL) : /*"ctimer1"*/);
 
-ALWAYS_INLINE void _e_reg_write_config( register unsigned val )
-{
-  asm volatile ("movts config, %0;" :: "r" (val) : );
-}
+#define get_ectimer0() \
+({ \
+  unsigned tmp; \
+  asm volatile ("movfs %0, ctimer0;" : "=r" (tmp) :: ); \
+  tmp; \
+})
 
-ALWAYS_INLINE unsigned _e_reg_read_status( void )
-{
-  register unsigned tmp asm("r0");
-  asm volatile ("movfs %0, status;" : "=r" (tmp) :: );
-  return tmp;
-}
+#define get_ectimer1() \
+({ \
+  unsigned tmp; \
+  asm volatile ("movfs %0, ctimer1;" : "=r" (tmp) :: ); \
+  tmp; \
+})
 
-ALWAYS_INLINE void _e_reg_write_status( register unsigned val )
-{
-  asm volatile ("movts status, %0;" :: "r" (val) : );
-}
+#define get_econfig() \
+({ \
+  unsigned tmp; \
+  asm volatile ("movfs %0, config;" : "=r" (tmp) :: ); \
+  tmp; \
+})
 
+#define set_econfig( VAL ) \
+  asm volatile ("movts config, %0;" :: "r" (VAL) : )
 
-unsigned * get_remote_ptr( unsigned id, void * ptr ) {
-// --------------------------------------------
-// needs to be adjusted for the 64 core version
-  unsigned col_id = id & 0x3;
-  unsigned row_id = id >> 2;
-  unsigned core_id = (row_id * 0x40 + col_id) + e_group_config.group_id;
-// --------------------------------------------
-  unsigned * new_ptr = (unsigned *)((core_id << 20) | (unsigned)ptr);
-  return new_ptr;
+#define get_estatus() \
+({ \
+  unsigned tmp; \
+  asm volatile ("movfs %0, status;" : "=r" (tmp) :: ); \
+  tmp; \
+})
+
+#define set_estatus( VAL ) \
+  asm volatile ("movts status, %0;" :: "r" (VAL) : )
+
+// get physical core id
+#define get_pcoreid() \
+({ \
+  e_coreid_t cid; \
+  __asm__ __volatile__ ("movfs %0, coreid" : "=r" (cid) : : /*"coreid"*/); \
+  cid; \
+})
+
+// generate physical core id
+#define gen_pcoreid( ROW, COL, GID ) \
+  (( (ROW) << 6 ) | (COL) | (GID) )
+
+void *get_remote_ptr( unsigned row_id, unsigned col_id, void *ptr ) {
+  /* If the address is global, return the pointer unchanged */
+  if ((unsigned)ptr & 0xfff00000)
+    return ptr;
+
+  unsigned core_id = gen_pcoreid( row_id, col_id, e_group_config.group_id );
+  return (void *)((core_id << 20) | (unsigned)ptr);
 }
 
 #endif /* #ifndef _E_METHODS_H_ */
