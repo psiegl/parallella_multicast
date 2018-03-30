@@ -11,11 +11,6 @@ Contains:
 - light-weight inline-methods for the config/status/counter registers
 - ... and as descriped, the support of the multicast
 
-Minor issue:
-- The example is optimized for the 16 core version, but can also be
-  modified to run on the 64 core variant (see config_t.h, also
-  e_methods.h -> get_remote_ptr needs to be modified!)
-
 Mayor issue:
 - The hardware multicast can only be issued by the cores of the first
   column (0, 1, 2, 3), otherwise a hardware bug is triggered, leading
