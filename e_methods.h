@@ -71,7 +71,7 @@
 #define get_pcoreid() \
 ({ \
   e_coreid_t cid; \
-  __asm__ __volatile__ ("movfs %0, coreid" : "=r" (cid) : : /*"coreid"*/); \
+  asm volatile ("movfs %0, coreid" : "=r" (cid) : : /*"coreid"*/); \
   cid; \
 })
 
